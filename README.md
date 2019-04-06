@@ -9,7 +9,7 @@ Go the project root directory and run the following:
 ```bash
 git clone http://github.com/redft/hexyexamples
 cd hexyexamples
-pip install -r requirements.txt
+pip install -r requirements.txt # If you're not using a virtual environment, you might need to use sudo.
 python2 example.py
 ```
 
