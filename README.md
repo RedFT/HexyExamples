@@ -1,10 +1,8 @@
 # Hexy Example
 
-This repo contains an graphical example of how someone might use `hexy`.
+This repo contains an graphical example of how someone might use [`hexy`](https://github.com/redft/hexy).
 
 #### Running the example
-
-Go the project root directory and run the following:
 
 ```bash
 git clone http://github.com/redft/hexyexamples
