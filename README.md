@@ -1,6 +1,6 @@
 # Hexy Example
 
-This repo contains an graphical example of how someone might use [`hexy`](https://github.com/redft/hexy).
+This repo contains a graphical example of how someone might use [`hexy`](https://github.com/redft/hexy).
 
 #### Running the example
 
