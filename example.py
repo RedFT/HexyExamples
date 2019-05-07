@@ -149,14 +149,14 @@ class ExampleHexMap():
 
     def draw(self):
         # show all hexes
-        hexagons = self.hex_map.values()
+        hexagons = list(self.hex_map.values())
         hex_positions = np.array([hexagon.get_draw_position() for hexagon in hexagons])
         sorted_idxs = np.argsort(hex_positions[:,1])
         for idx in sorted_idxs:
             self.main_surf.blit(hexagons[idx].image, hex_positions[idx] + self.center)
 
         # draw values of hexes
-        for hexagon in self.hex_map.values():
+        for hexagon in list(self.hex_map.values()):
             text = self.font.render(str(hexagon.value), False, (0, 0, 0))
             text.set_alpha(160)
             text_pos = hexagon.get_position() + self.center
@@ -172,10 +172,10 @@ class ExampleHexMap():
         rad_hex_axial = hx.cube_to_axial(rad_hex)
         hexes = self.hex_map[rad_hex_axial]
 
-        map(lambda hexagon: 
+        list(map(lambda hexagon: 
                 self.main_surf.blit(
                     self.selected_hex_image, hexagon.get_draw_position() + self.center), 
-                hexes)
+                hexes))
 
         # draw hud
         self.selection_type
