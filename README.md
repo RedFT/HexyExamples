@@ -8,7 +8,7 @@ This repo contains a graphical example of how someone might use [`hexy`](https:/
 git clone http://github.com/redft/hexyexamples
 cd hexyexamples
 pip install -r requirements.txt # If you're not using a virtual environment, you might need to use sudo.
-python2 example.py
+python example.py
 ```
 
 The example app just shows off some features of the library. To play around you can:
