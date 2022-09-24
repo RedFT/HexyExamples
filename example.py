@@ -5,6 +5,7 @@ import pygame as pg
 from example_hex import ExampleHex
 from example_hex import make_hex_surface
 
+
 COL_IDX = np.random.randint(0, 4, (7 ** 3))
 COLORS = np.array([
     [244, 98, 105],   # red
@@ -21,6 +22,7 @@ class Selection:
         RING = 1
         DISK = 2
         LINE = 3
+        SPIRAL = 4
 
         @staticmethod
         def to_string(selection_type):
@@ -30,6 +32,8 @@ class Selection:
                 return "ring"
             elif selection_type == Selection.Type.LINE:
                 return "line"
+            elif selection_type == Selection.Type.SPIRAL:
+                return "spiral"
             else:
                 return "point"
 
@@ -41,6 +45,12 @@ class Selection:
             return hx.get_ring(cube_mouse, rad.value)
         elif selection_type == Selection.Type.LINE:
             return hx.get_hex_line(clicked_hex, cube_mouse)
+        elif selection_type == Selection.Type.SPIRAL:
+            click_rad = int(hx.get_cube_distance([0, 0, 0], clicked_hex))
+            mouse_rad = int(hx.get_cube_distance([0, 0, 0], cube_mouse))
+            return hx.get_spiral([0, 0, 0],
+                                 min(click_rad, mouse_rad),
+                                 max(click_rad, mouse_rad))
         else:
             return cube_mouse.copy()
 
@@ -55,15 +65,13 @@ class ClampedInteger:
         self.lower_limit = lower_limit
         self.upper_limit = upper_limit
 
-    def increment(self):
-        self.value += 1
-        if self.value > self.upper_limit:
-            self.value = self.upper_limit
+    def __iadd__(self, other):
+        self.value = min(self.value + other, self.upper_limit)
+        return self
 
-    def decrement(self):
-        self.value -= 1
-        if self.value < self.lower_limit:
-            self.value = self.lower_limit
+    def __isub__(self, other):
+        self.value = max(self.value - other, self.lower_limit)
+        return self
 
 
 class CyclicInteger:
@@ -77,19 +85,22 @@ class CyclicInteger:
         self.lower_limit = lower_limit
         self.upper_limit = upper_limit
 
-    def increment(self):
-        self.value += 1
+    def __iadd__(self, other):
+        self.value += other
         if self.value > self.upper_limit:
-            self.value = self.lower_limit
+            self.value = self.lower_limit + self.value - self.upper_limit
+        return self
 
-    def decrement(self):
-        self.value -= 1
+    def __isub__(self, other):
+        self.value -= other
         if self.value < self.lower_limit:
-            self.value = self.upper_limit
+            self.value = self.upper_limit - self.lower_limit - self.value
+        return self
+
 
 
 class ExampleHexMap:
-    def __init__(self, size=(600, 600), hex_radius=22, caption="ExampleHexMap"):
+    def __init__(self, size=(1000, 1000), hex_radius=22, caption="ExampleHexMap"):
         self.caption = caption
         self.size = np.array(size)
         self.width, self.height = self.size
@@ -98,7 +109,7 @@ class ExampleHexMap:
         self.hex_radius = hex_radius
 
         self.hex_map = hx.HexMap()
-        self.max_coord = 6
+        self.max_coord = 10
 
         self.rad = ClampedInteger(3, 1, 5)
 
@@ -108,16 +119,16 @@ class ExampleHexMap:
                 (255, 255, 255), 
                 hollow=True)
 
-        self.selection_type = CyclicInteger(3, 0, 3)
+        self.selection_type = CyclicInteger(3, 0, 4)
         self.clicked_hex = np.array([0, 0, 0])
 
         # Get all possible coordinates within `self.max_coord` as radius.
-        spiral_coordinates = hx.get_spiral(np.array((0, 0, 0)), 1, self.max_coord)
+        all_coordinates = hx.get_disk(np.array((0, 0, 0)), self.max_coord)
 
-        # Convert `spiral_coordinates` to axial coordinates, create hexes and randomly filter out some hexes.
+        # Convert `all_coordinates` to axial coordinates, create hexes and randomly filter out some hexes.
         hexes = []
-        num_shown_hexes = np.random.binomial(len(spiral_coordinates), .9)
-        axial_coordinates = hx.cube_to_axial(spiral_coordinates)
+        num_shown_hexes = np.random.binomial(len(all_coordinates), .95)
+        axial_coordinates = hx.cube_to_axial(all_coordinates)
         axial_coordinates = axial_coordinates[np.random.choice(len(axial_coordinates), num_shown_hexes, replace=False)]
 
         for i, axial in enumerate(axial_coordinates):
@@ -156,17 +167,17 @@ class ExampleHexMap:
                             self.hex_radius)
                     self.clicked_hex = self.clicked_hex[0]
                 if event.button == 3:
-                    self.selection_type.increment()
+                    self.selection_type += 1
                 if event.button == 4:
-                    self.rad.increment()
+                    self.rad += 1
                 if event.button == 5:
-                    self.rad.decrement()
+                    self.rad -= 1
 
             if event.type == pg.KEYUP:
                 if event.key == pg.K_UP:
-                    self.rad.increment()
+                    self.rad += 1
                 elif event.key == pg.K_DOWN:
-                    self.rad.decrement()
+                    self.rad -= 1
 
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
@@ -195,8 +206,11 @@ class ExampleHexMap:
             text_pos -= (text.get_width() / 2, text.get_height() / 2)
             self.main_surf.blit(text, text_pos)
 
-        mouse_pos = np.array([np.array(pg.mouse.get_pos()) - self.center])
-        cube_mouse = hx.pixel_to_cube(mouse_pos, self.hex_radius)
+        mouse_pos = np.array([pg.mouse.get_pos()]) - self.center
+
+        # pixel_to_cube is meant to be able to convert many pixels to cube coordinates, so it's output and input
+        # `mouse_pos` are 2d arrays. We want the only want the first element here; hence the `[0]`
+        cube_mouse = hx.pixel_to_cube(mouse_pos, self.hex_radius)[0]
 
         # choose either ring or disk
         rad_hex = Selection.get_selection(self.selection_type.value, cube_mouse, self.rad, self.clicked_hex)
